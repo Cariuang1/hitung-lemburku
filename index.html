@@ -80,85 +80,97 @@
     </div>
 
     <script>
-        let totalSemuaLembur = 0;
-        let gajiPokokTetap = null;
-        let rowEdit = null;
-        let uangLemburSebelumEdit = 0;
+      <script>
+    let totalSemuaLembur = 0;
+    let gajiPokokTetap = null;
+    let rowEdit = null;
 
-        function simpanGajiPokok() {
-            let gajiPokok = parseFloat(document.getElementById("gajiPokok").value);
-            if (!isNaN(gajiPokok) && gajiPokok > 0) {
-                gajiPokokTetap = gajiPokok;
+    function simpanGajiPokok() {
+        let gajiPokok = parseFloat(document.getElementById("gajiPokok").value);
+        if (!isNaN(gajiPokok) && gajiPokok > 0) {
+            gajiPokokTetap = gajiPokok;
+        }
+    }
+
+    function hitungLembur() {
+        let tanggal = document.getElementById("tanggal").value;
+        let jamMulai = document.getElementById("jamMulai").value;
+        let jamSelesai = document.getElementById("jamSelesai").value;
+        let statusLembur = document.getElementById("statusLembur").value;
+
+        if (gajiPokokTetap === null) {
+            alert("Masukkan gaji pokok terlebih dahulu!");
+            return;
+        }
+
+        let mulai = new Date(`2025-01-01T${jamMulai}:00`);
+        let selesai = new Date(`2025-01-01T${jamSelesai}:00`);
+
+        if (selesai <= mulai) {
+            alert("Jam selesai harus lebih besar dari jam mulai!");
+            return;
+        }
+
+        let totalJam = (selesai - mulai) / (1000 * 60 * 60);
+        let gajiPerJam = gajiPokokTetap / 173;
+        let uangLembur = 0;
+
+        if (statusLembur === "HKN") {
+            if (totalJam <= 1) {
+                uangLembur = totalJam * (1.5 * gajiPerJam);
+            } else {
+                uangLembur = (1 * 1.5 * gajiPerJam) + ((totalJam - 1) * 2 * gajiPerJam);
+            }
+        } else {
+            if (totalJam <= 7) {
+                uangLembur = totalJam * (2 * gajiPerJam);
+            } else if (totalJam <= 8) {
+                uangLembur = (7 * 2 * gajiPerJam) + ((totalJam - 7) * 3 * gajiPerJam);
+            } else {
+                uangLembur = (7 * 2 * gajiPerJam) + (1 * 3 * gajiPerJam) + ((totalJam - 8) * 4 * gajiPerJam);
             }
         }
 
-        function hitungLembur() {
-            let tanggal = document.getElementById("tanggal").value;
-            let jamMulai = document.getElementById("jamMulai").value;
-            let jamSelesai = document.getElementById("jamSelesai").value;
-            let statusLembur = document.getElementById("statusLembur").value;
+        let newRow = document.createElement("tr");
+        newRow.innerHTML = `
+            <td>${tanggal}</td>
+            <td>${totalJam.toFixed(2)}</td>
+            <td>${statusLembur === "HKN" ? "Hari Kerja Normal" : "Hari Libur"}</td>
+            <td class="uangLembur">Rp ${Math.floor(uangLembur).toLocaleString()}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="hapusRow(this, ${uangLembur})">Hapus</button>
+            </td>
+        `;
+        document.getElementById("hasilLembur").appendChild(newRow);
 
-            if (gajiPokokTetap === null) {
-                alert("Masukkan gaji pokok terlebih dahulu!");
-                return;
-            }
+        totalSemuaLembur += uangLembur;
+        updateTotalLembur();
+    }
 
-            let mulai = new Date(`2025-01-01T${jamMulai}:00`);
-            let selesai = new Date(`2025-01-01T${jamSelesai}:00`);
+    function hapusRow(button, uangLembur) {
+        let row = button.closest("tr");
+        totalSemuaLembur -= uangLembur;
 
-            if (selesai <= mulai) {
-                alert("Jam selesai harus lebih besar dari jam mulai!");
-                return;
-            }
-
-            let totalJam = (selesai - mulai) / (1000 * 60 * 60);
-            let gajiPerJam = gajiPokokTetap / 173;
-            let uangLembur = 0;
-
-            if (statusLembur === "HKN") {
-                if (totalJam <= 1) {
-                    uangLembur = totalJam * (1.5 * gajiPerJam);
-                } else {
-                    uangLembur = (1 * 1.5 * gajiPerJam) + ((totalJam - 1) * 2 * gajiPerJam);
-                }
-            } else {
-                if (totalJam <= 7) {
-                    uangLembur = totalJam * (2 * gajiPerJam);
-                } else if (totalJam <= 8) {
-                    uangLembur = (7 * 2 * gajiPerJam) + ((totalJam - 7) * 3 * gajiPerJam);
-                } else {
-                    uangLembur = (7 * 2 * gajiPerJam) + (1 * 3 * gajiPerJam) + ((totalJam - 8) * 4 * gajiPerJam);
-                }
-            }
-
-            if (rowEdit) {
-                totalSemuaLembur -= uangLemburSebelumEdit;
-                rowEdit.cells[0].innerText = tanggal;
-                rowEdit.cells[1].innerText = totalJam.toFixed(2);
-                rowEdit.cells[2].innerText = statusLembur === "HKN" ? "Hari Kerja Normal" : "Hari Libur";
-                rowEdit.cells[3].innerText = `Rp ${Math.floor(uangLembur).toLocaleString()}`;
-
-                totalSemuaLembur += uangLembur;
-                rowEdit = null;
-            } else {
-                let newRow = document.createElement("tr");
-                newRow.innerHTML = `
-                    <td>${tanggal}</td>
-                    <td>${totalJam.toFixed(2)}</td>
-                    <td>${statusLembur === "HKN" ? "Hari Kerja Normal" : "Hari Libur"}</td>
-                    <td>Rp ${Math.floor(uangLembur).toLocaleString()}</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm" onclick="hapusRow(this, ${Math.floor(uangLembur)})">Hapus</button>
-                    </td>
-                `;
-                document.getElementById("hasilLembur").appendChild(newRow);
-
-                totalSemuaLembur += uangLembur;
-            }
-
-            document.getElementById("totalLembur").innerText = `Rp ${Math.floor(totalSemuaLembur).toLocaleString()}`;
+        // Pastikan total tidak negatif
+        if (totalSemuaLembur < 0) {
+            totalSemuaLembur = 0;
         }
-    </script>
 
+        row.remove();
+        updateTotalLembur();
+    }
+
+    function updateTotalLembur() {
+        document.getElementById("totalLembur").innerText = `Rp ${Math.floor(totalSemuaLembur).toLocaleString()}`;
+    }
+
+    function resetForm() {
+        document.getElementById("formLembur").reset();
+        document.getElementById("hasilLembur").innerHTML = `<tr><td colspan="5" class="text-center">Belum ada perhitungan.</td></tr>`;
+        totalSemuaLembur = 0;
+        updateTotalLembur();
+        gajiPokokTetap = null;
+    }
+</script>
 </body>
 </html>

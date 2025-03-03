@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hitung Lembur Ku</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        .input-group { margin-bottom: 10px; }
+        .btn { font-size: 1rem; padding: 10px; }
+        @media (max-width: 768px) {
+            .form-control, .form-select { font-size: 14px; padding: 8px; }
+            .btn { font-size: 14px; padding: 8px; }
+        }
+    </style>
+</head>
+<body class="container mt-5">
+
+    <h2 class="text-center">Hitung Lembur Ku</h2>
+
+    <form id="formLembur">
+        <div class="row mb-3">
+            <div class="col-md-4 col-sm-12">
+                <label for="tanggal" class="form-label">Tanggal</label>
+                <input type="date" class="form-control" id="tanggal" required>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <label for="jamMulai" class="form-label">Jam Mulai</label>
+                <input type="time" class="form-control" id="jamMulai" required>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <label for="jamSelesai" class="form-label">Jam Selesai</label>
+                <input type="time" class="form-control" id="jamSelesai" required>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6 col-sm-12">
+                <label for="statusLembur" class="form-label">Status Hari</label>
+                <select class="form-select" id="statusLembur" required>
+                    <option value="HKN">Hari Kerja Normal</option>
+                    <option value="HL">Hari Libur</option>
+                </select>
+            </div>
+            <div class="col-md-6 col-sm-12">
+                <label for="gajiPokok" class="form-label">Gaji Pokok (Rp)</label>
+                <input type="number" class="form-control" id="gajiPokok" placeholder="Masukkan gaji pokok" onchange="simpanGajiPokok()">
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="btnSubmit" onclick="hitungLembur()">Hitung Lembur</button>
+        <button type="button" class="btn btn-danger ms-2" onclick="resetForm()">Reset</button>
+    </form>
+
+    <h4 class="mt-4">Hasil Perhitungan Lembur</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Total Jam</th>
+                    <th>Status Hari</th>
+                    <th>Uang Lembur (Rp)</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="hasilLembur">
+                <tr>
+                    <td colspan="5" class="text-center">Belum ada perhitungan.</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" class="text-end fw-bold">Total Uang Lembur:</td>
+                    <td class="fw-bold" id="totalLembur">Rp 0</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <script>
+        let totalSemuaLembur = 0;
+        let gajiPokokTetap = null;
+        let rowEdit = null;
+        let uangLemburSebelumEdit = 0;
+
+        function simpanGajiPokok() {
+            let gajiPokok = parseFloat(document.getElementById("gajiPokok").value);
+            if (!isNaN(gajiPokok) && gajiPokok > 0) {
+                gajiPokokTetap = gajiPokok;
+            }
+        }
+
+        function hitungLembur() {
+            let tanggal = document.getElementById("tanggal").value;
+            let jamMulai = document.getElementById("jamMulai").value;
+            let jamSelesai = document.getElementById("jamSelesai").value;
+            let statusLembur = document.getElementById("statusLembur").value;
+
+            if (gajiPokokTetap === null) {
+                alert("Masukkan gaji pokok terlebih dahulu!");
+                return;
+            }
+
+            let mulai = new Date(`2025-01-01T${jamMulai}:00`);
+            let selesai = new Date(`2025-01-01T${jamSelesai}:00`);
+
+            if (selesai <= mulai) {
+                alert("Jam selesai harus lebih besar dari jam mulai!");
+                return;
+            }
+
+            let totalJam = (selesai - mulai) / (1000 * 60 * 60);
+            let uangLembur = gajiPokokTetap / 173 * totalJam * (statusLembur === "HKN" ? 1.5 : 2);
+
+            if (rowEdit) {
+                totalSemuaLembur -= uangLemburSebelumEdit;
+                rowEdit.cells[0].innerText = tanggal;
+                rowEdit.cells[1].innerText = totalJam.toFixed(2);
+                rowEdit.cells[2].innerText = statusLembur === "HKN" ? "Hari Kerja Normal" : "Hari Libur";
+                rowEdit.cells[3].innerText = `Rp ${Math.floor(uangLembur).toLocaleString()}`;
+
+                totalSemuaLembur += uangLembur;
+                document.getElementById("btnSubmit").innerText = "Hitung Lembur";
+                rowEdit = null;
+            } else {
+                let newRow = document.createElement("tr");
+                newRow.innerHTML = `
+                    <td>${tanggal}</td>
+                    <td>${totalJam.toFixed(2)}</td>
+                    <td>${statusLembur === "HKN" ? "Hari Kerja Normal" : "Hari Libur"}</td>
+                    <td class="uangLembur">Rp ${Math.floor(uangLembur).toLocaleString()}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" onclick="editRow(this, ${Math.floor(uangLembur)})">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="hapusRow(this, ${Math.floor(uangLembur)})">Hapus</button>
+                    </td>
+                `;
+                document.getElementById("hasilLembur").appendChild(newRow);
+
+                totalSemuaLembur += uangLembur;
+            }
+
+            document.getElementById("totalLembur").innerText = `Rp ${Math.floor(totalSemuaLembur).toLocaleString()}`;
+            document.getElementById("formLembur").reset();
+            document.getElementById("gajiPokok").value = gajiPokokTetap;
+        }
+
+        function editRow(button, uangLembur) {
+            rowEdit = button.closest("tr");
+            let cells = rowEdit.getElementsByTagName("td");
+
+            uangLemburSebelumEdit = uangLembur;
+
+            document.getElementById("tanggal").value = cells[0].innerText;
+            document.getElementById("statusLembur").value = cells[2].innerText.includes("Kerja") ? "HKN" : "HL";
+
+            document.getElementById("btnSubmit").innerText = "Update";
+        }
+
+        function hapusRow(button, uangLembur) {
+            let row = button.closest("tr");
+
+            totalSemuaLembur -= uangLembur;
+            document.getElementById("totalLembur").innerText = `Rp ${Math.floor(totalSemuaLembur).toLocaleString()}`;
+            
+            row.remove();
+        }
+    </script>
+
+</body>
+</html>
